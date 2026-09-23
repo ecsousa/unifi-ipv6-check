@@ -72,6 +72,31 @@ docker run -d \
   unifi-ipv6-check
 ```
 
+### Docker Compose
+
+You can use the provided `docker-compose.example.yml` as a baseline. Note that using `network_mode: bridge` prevents Docker Compose from creating a custom default network stack.
+
+```yaml
+services:
+  unifi-ipv6-check:
+    image: ghcr.io/ecsousa/unifi-vpn-check:main
+    container_name: unifi-ipv6-check
+    restart: unless-stopped
+    network_mode: bridge
+    environment:
+      - DNS_NAME=your.hostname.com
+      - CF_ZONE_ID=your_cf_zone_id
+      - CF_APIKEY=your_cf_apikey
+      - SERVER_BASE_URL=https://192.168.1.1
+      - SERVER_USERNAME=admin
+      - SERVER_PASSWORD=password
+      - SERVER_MAC_ADDRESS=xx:xx:xx:xx:xx:xx
+      - CLIENT_BASE_URL=https://192.168.2.1
+      - CLIENT_USERNAME=admin
+      - CLIENT_PASSWORD=password
+      - CLIENT_NETWORK_ID=your_network_id
+```
+
 ## GitHub Actions
 
 This repository includes GitHub Actions workflows for continuous integration and delivery. 
