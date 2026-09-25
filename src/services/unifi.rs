@@ -29,7 +29,12 @@ impl<'a> UnifiService<'a> {
         req = req.header("X-API-KEY", self.apikey);
 
         let stat_resp = req.send().await?;
+        let stat_status = stat_resp.status();
         let stat_text = stat_resp.text().await?;
+
+        if !stat_status.is_success() {
+            return Err(format!("Unifi API error in get_ipv6: {} - {}", stat_status, stat_text).into());
+        }
 
         if self.verbose {
             debug!("Server json payload read from network: {}", stat_text);
@@ -78,7 +83,12 @@ impl<'a> UnifiService<'a> {
         req = req.header("X-API-KEY", self.apikey);
 
         let netconf_resp = req.send().await?;
+        let netconf_status = netconf_resp.status();
         let netconf_text = netconf_resp.text().await?;
+
+        if !netconf_status.is_success() {
+            return Err(format!("Unifi API error in get_network_config: {} - {}", netconf_status, netconf_text).into());
+        }
 
         if self.verbose {
             debug!("Client json payload read from network: {}", netconf_text);
@@ -120,9 +130,13 @@ impl<'a> UnifiService<'a> {
         req = req.header("X-API-KEY", self.apikey);
 
         let update_resp = req.send().await?;
-        if !update_resp.status().is_success() {
-            error!("Updating VPN client failed: {}", update_resp.status());
-            Err("Updating VPN client failed".into())
+        let update_status = update_resp.status();
+
+        if !update_status.is_success() {
+            let err_text = update_resp.text().await.unwrap_or_default();
+            let err_msg = format!("Updating VPN client failed: {} - {}", update_status, err_text);
+            error!("{}", err_msg);
+            Err(err_msg.into())
         } else {
             info!("Updating VPN client: SUCCESS");
             Ok(())
