@@ -1,6 +1,6 @@
 use crate::models::unifi::UnifiEnvelope;
 use reqwest::Client;
-use serde_json::{Value, json};
+use serde_json::Value;
 use tracing::{debug, error, info};
 
 pub struct UnifiService<'a> {
@@ -61,7 +61,7 @@ impl<'a> UnifiService<'a> {
         })
     }
 
-    async fn get_network_config(
+    pub async fn get_network_config(
         &self,
         network_id: &str,
     ) -> Result<(Value, UnifiEnvelope<Value>), Box<dyn std::error::Error>> {
@@ -89,7 +89,7 @@ impl<'a> UnifiService<'a> {
         Ok((node, env))
     }
 
-    async fn set_network_config(
+    pub async fn set_network_config(
         &self,
         network_id: &str,
         payload: &Value,
@@ -119,17 +119,4 @@ impl<'a> UnifiService<'a> {
         }
     }
 
-    pub async fn update_vpn_client(
-        &self,
-        network_id: &str,
-        ipv6: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let (mut node, _) = self.get_network_config(network_id).await?;
-
-        if let Some(obj) = node.as_object_mut() {
-            obj.insert("wireguard_client_peer_ip".to_string(), json!(ipv6));
-        }
-
-        self.set_network_config(network_id, &node).await
-    }
 }
