@@ -35,7 +35,12 @@ impl<'a> UnifiService<'a> {
             debug!("Server json payload read from network: {}", stat_text);
         }
 
-        let env: UnifiEnvelope<Value> = serde_json::from_str(&stat_text)?;
+        let env: UnifiEnvelope<Value> = serde_json::from_str(&stat_text).map_err(|e| {
+            format!(
+                "Failed to parse Unifi stats response: {}. Raw payload: {}",
+                e, stat_text
+            )
+        })?;
         let mut read_ipv6 = None;
         if let Some(device) = env.data.first() {
             if let Some(ipv6_arr) = device
@@ -79,7 +84,12 @@ impl<'a> UnifiService<'a> {
             debug!("Client json payload read from network: {}", netconf_text);
         }
 
-        let mut env: UnifiEnvelope<Value> = serde_json::from_str(&netconf_text)?;
+        let mut env: UnifiEnvelope<Value> = serde_json::from_str(&netconf_text).map_err(|e| {
+            format!(
+                "Failed to parse Unifi network config response: {}. Raw payload: {}",
+                e, netconf_text
+            )
+        })?;
         let node = env
             .data
             .first_mut()
