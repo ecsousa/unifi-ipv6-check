@@ -1,4 +1,4 @@
-use crate::models::unifi::{LoginRequest, UnifiEnvelope};
+use crate::models::unifi::UnifiEnvelope;
 use reqwest::Client;
 use serde_json::{Value, json};
 use tracing::{debug, error, info};
@@ -6,55 +6,18 @@ use tracing::{debug, error, info};
 pub struct UnifiService<'a> {
     client: &'a Client,
     base_url: &'a str,
-    csrf_token: String,
-    session_cookies: String,
+    apikey: &'a str,
     verbose: bool,
 }
 
 impl<'a> UnifiService<'a> {
-    pub fn new(client: &'a Client, base_url: &'a str, verbose: bool) -> Self {
+    pub fn new(client: &'a Client, base_url: &'a str, apikey: &'a str, verbose: bool) -> Self {
         Self {
             client,
             base_url,
-            csrf_token: String::new(),
-            session_cookies: String::new(),
+            apikey,
             verbose,
         }
-    }
-
-    pub async fn login(
-        &mut self,
-        username: &str,
-        password: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let login_url = format!("{}/api/auth/login", self.base_url);
-        let login_req = LoginRequest {
-            username,
-            password,
-            remember_me: false,
-            token: "",
-        };
-
-        let resp = self.client.post(&login_url).json(&login_req).send().await?;
-        if !resp.status().is_success() {
-            error!("Unifi login failed to {}: {}", self.base_url, resp.status());
-            return Err("Unifi login failed".into());
-        }
-
-        self.csrf_token = resp
-            .headers()
-            .get("X-CSRF-Token")
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or_default()
-            .to_string();
-
-        let mut cookie_parts = Vec::new();
-        for cookie in resp.cookies() {
-            cookie_parts.push(format!("{}={}", cookie.name(), cookie.value()));
-        }
-        self.session_cookies = cookie_parts.join("; ");
-
-        Ok(())
     }
 
     pub async fn get_ipv6(&self, mac_address: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -63,12 +26,7 @@ impl<'a> UnifiService<'a> {
             self.base_url, mac_address
         );
         let mut req = self.client.get(&stat_url);
-        if !self.csrf_token.is_empty() {
-            req = req.header("X-CSRF-Token", &self.csrf_token);
-        }
-        if !self.session_cookies.is_empty() {
-            req = req.header(reqwest::header::COOKIE, &self.session_cookies);
-        }
+        req = req.header("X-API-KEY", self.apikey);
 
         let stat_resp = req.send().await?;
         let stat_text = stat_resp.text().await?;
@@ -112,12 +70,7 @@ impl<'a> UnifiService<'a> {
             self.base_url, network_id
         );
         let mut req = self.client.get(&netconf_url);
-        if !self.csrf_token.is_empty() {
-            req = req.header("X-CSRF-Token", &self.csrf_token);
-        }
-        if !self.session_cookies.is_empty() {
-            req = req.header(reqwest::header::COOKIE, &self.session_cookies);
-        }
+        req = req.header("X-API-KEY", self.apikey);
 
         let netconf_resp = req.send().await?;
         let netconf_text = netconf_resp.text().await?;
@@ -154,12 +107,7 @@ impl<'a> UnifiService<'a> {
         }
 
         let mut req = self.client.put(&netconf_url).json(payload);
-        if !self.csrf_token.is_empty() {
-            req = req.header("X-CSRF-Token", &self.csrf_token);
-        }
-        if !self.session_cookies.is_empty() {
-            req = req.header(reqwest::header::COOKIE, &self.session_cookies);
-        }
+        req = req.header("X-API-KEY", self.apikey);
 
         let update_resp = req.send().await?;
         if !update_resp.status().is_success() {

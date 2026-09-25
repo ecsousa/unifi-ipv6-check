@@ -33,11 +33,8 @@ async fn run_loop(args: &Args, config: &AppConfig) -> Result<(), Box<dyn std::er
         .build()?;
 
     // 2. Login to unifi router (SERVER)
-    let mut server_unifi =
-        services::unifi::UnifiService::new(&http_client, &config.server_base_url, args.verbose);
-    server_unifi
-        .login(&config.server_username, &config.server_password)
-        .await?;
+    let server_unifi = services::unifi::UnifiService::new(
+        &http_client, &config.server_base_url, &config.server_apikey, args.verbose);
 
     // 3. Make GET request to server router & extract IPv6
     let read_ipv6 = server_unifi.get_ipv6(&config.server_mac_address).await?;
@@ -66,11 +63,10 @@ async fn run_loop(args: &Args, config: &AppConfig) -> Result<(), Box<dyn std::er
         .cookie_store(true)
         .timeout(Duration::from_secs(10))
         .build()?;
-    let mut client_unifi =
-        services::unifi::UnifiService::new(&client_http, &config.client_base_url, args.verbose);
-    client_unifi
-        .login(&config.client_username, &config.client_password)
-        .await?;
+
+    let client_unifi =
+        services::unifi::UnifiService::new(
+            &client_http, &config.client_base_url, &config.client_apikey, args.verbose);
 
     // 6. Update network configuration
     client_unifi
